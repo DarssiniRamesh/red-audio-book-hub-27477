@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:intl/intl.dart';
+import 'package:audioplayers/audioplayers.dart';
 
 // PUBLIC_INTERFACE
 void main() {
@@ -26,8 +27,8 @@ class AudioBookApp extends StatelessWidget {
             primary: Color(0xFFB71C1C),
             secondary: Color(0xFFD32F2F),
             tertiary: Color(0xFFFF5252),
-            background: Color(0xFFFDEAEA),
-            surface: Colors.white,
+            surface: Color(0xFFFDEAEA),
+            // background: Color(0xFFFDEAEA), -- removed as 'background' is deprecated
             onPrimary: Colors.white,
             onSecondary: Colors.white,
             onTertiary: Colors.white,
@@ -197,7 +198,7 @@ List<AudioBook> demoBooks = [
 
 //#region --- State Management ---
 class BookProvider extends ChangeNotifier {
-  List<AudioBook> _books = demoBooks;
+  final List<AudioBook> _books = demoBooks;
   String _search = '';
 
   AudioBook? _currentBook;
@@ -205,7 +206,6 @@ class BookProvider extends ChangeNotifier {
 
   // Used to persist last played book (book id) and play mode
   SharedPreferences? _prefs;
-  bool _initialized = false;
 
   BookProvider() {
     _init();
@@ -217,7 +217,6 @@ class BookProvider extends ChangeNotifier {
     if (bookId != null) {
       _currentBook = _books.firstWhere((b) => b.id == bookId, orElse: () => _books[0]);
     }
-    _initialized = true;
     notifyListeners();
   }
 
@@ -339,7 +338,7 @@ class BookDetailScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final provider = Provider.of<BookProvider>(context, listen: false);
+    // final provider = Provider.of<BookProvider>(context, listen: false);
 
     return Scaffold(
       appBar: AppBar(
@@ -441,7 +440,7 @@ class _BookGridCard extends StatelessWidget {
       color: const Color(0xFFFDEAEA),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
       elevation: 4,
-      shadowColor: Colors.redAccent.withOpacity(0.15),
+      shadowColor: Colors.redAccent.withAlpha((0.15 * 255).toInt()),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -505,10 +504,8 @@ class _BookGridCard extends StatelessWidget {
   }
 }
 
-//#endregion
-
+ 
 //#region --- Audio Player Widget (UI & State) ---
-import 'package:audioplayers/audioplayers.dart';
 
 /// PUBLIC_INTERFACE
 /// Audio Player Bar widget for both book list and detail.
@@ -552,6 +549,7 @@ class _AudioPlayerBarState extends State<AudioPlayerBar> {
   }
 
   Future<void> _play(AudioBook book) async {
+    final provider = Provider.of<BookProvider>(context, listen: false);
     if (_activeBook == null || _activeBook!.id != book.id) {
       await _audioPlayer.stop();
       setState(() {
@@ -561,12 +559,13 @@ class _AudioPlayerBarState extends State<AudioPlayerBar> {
       });
     }
     await _audioPlayer.play(UrlSource(book.audioUrl));
-    Provider.of<BookProvider>(context, listen: false).play();
+    provider.play();
   }
 
   Future<void> _pause() async {
+    final provider = Provider.of<BookProvider>(context, listen: false);
     await _audioPlayer.pause();
-    Provider.of<BookProvider>(context, listen: false).pause();
+    provider.pause();
   }
 
   @override
@@ -593,7 +592,7 @@ class _AudioPlayerBarState extends State<AudioPlayerBar> {
         color: Colors.white,
         border: Border(
           top: BorderSide(
-            color: mainRed.withOpacity(0.32),
+            color: mainRed.withAlpha((0.32 * 255).toInt()),
             width: 2,
           ),
         ),
@@ -685,7 +684,7 @@ class _AudioPlayerBarState extends State<AudioPlayerBar> {
                   Slider(
                     thumbColor: accentRed,
                     activeColor: accentRed,
-                    inactiveColor: accentRed.withOpacity(0.18),
+                    inactiveColor: accentRed.withAlpha((0.18 * 255).toInt()),
                     min: 0,
                     max: (_duration.inSeconds).toDouble(),
                     value: _pos.inSeconds <= _duration.inSeconds
@@ -734,7 +733,8 @@ class _AudioPlayerBarState extends State<AudioPlayerBar> {
 //#region --- Utility ---
 String _formatDuration(int seconds) {
   final duration = Duration(seconds: seconds);
-  final twoDigits = (int n) => n.toString().padLeft(2, '0');
+
+  String twoDigits(int n) => n.toString().padLeft(2, '0');
   final hours = duration.inHours;
   final minutes = duration.inMinutes % 60;
   final secs = duration.inSeconds % 60;
