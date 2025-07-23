@@ -8,7 +8,8 @@ plugins {
 android {
     namespace = "com.example.audio_book_frontend"
     compileSdk = flutter.compileSdkVersion
-    ndkVersion = flutter.ndkVersion
+    // Explicitly specify the required NDK version to avoid release build failures
+    ndkVersion = "27.0.12077973"
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
